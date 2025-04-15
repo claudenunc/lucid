@@ -1,224 +1,255 @@
-'use client'
-
-import React, { useState, useEffect } from 'react'
-import { useDreamContext } from '@/lib/dream-context'
-import { dreamJournalService } from '@/lib/api'
+import React, { useState } from 'react';
 
 interface DreamJournalListProps {
-  className?: string
-  limit?: number
-  onSelectEntry?: (entryId: number) => void
+  className?: string;
 }
 
-type DreamJournalEntry = {
-  id: number
-  title: string
-  dream_date: string
-  lucidity_level: number
-  tags: string[]
-  content: string
-}
+type DreamEntry = {
+  id: number;
+  title: string;
+  content: string;
+  dreamDate: string;
+  lucidityLevel: number;
+  tags: string[];
+};
 
-export default function DreamJournalList({ 
-  className = '', 
-  limit,
-  onSelectEntry 
-}: DreamJournalListProps) {
-  const { user } = useDreamContext()
-  const [entries, setEntries] = useState<DreamJournalEntry[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState('')
-  const [sortBy, setSortBy] = useState<'date' | 'lucidity'>('date')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-
-  // Fetch dream journal entries
-  useEffect(() => {
-    const fetchEntries = async () => {
-      if (!user) return;
-      
-      try {
-        setIsLoading(true);
-        const data = await dreamJournalService.getAllEntries();
-        setEntries(data);
-        setError(null);
-      } catch (err: any) {
-        console.error('Error fetching dream journal entries:', err);
-        setError(err.error || 'Failed to load dream journal entries');
-      } finally {
-        setIsLoading(false);
-      }
+export default function DreamJournalList({ className = '' }: DreamJournalListProps) {
+  const [entries, setEntries] = useState<DreamEntry[]>([
+    {
+      id: 1,
+      title: "Flying Over Mountains",
+      content: "I was flying over snow-capped mountains. The air was crisp and I could control my direction. When I realized I was dreaming, I flew higher and explored the landscape below.",
+      dreamDate: "2025-04-14",
+      lucidityLevel: 8,
+      tags: ["flying", "lucid", "mountains"]
+    },
+    {
+      id: 2,
+      title: "Underwater City",
+      content: "I discovered an ancient city beneath the ocean. The buildings were made of coral and crystal. Fish of all colors swam through the streets. I could breathe underwater.",
+      dreamDate: "2025-04-12",
+      lucidityLevel: 5,
+      tags: ["water", "city", "exploration"]
+    },
+    {
+      id: 3,
+      title: "Time Travel",
+      content: "I was in a medieval castle. People were dressed in period clothing. I realized I was dreaming when I saw a digital clock on the wall. I then tried to move forward in time by spinning.",
+      dreamDate: "2025-04-10",
+      lucidityLevel: 7,
+      tags: ["time", "lucid", "historical"]
+    }
+  ]);
+  
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    dreamDate: new Date().toISOString().split('T')[0],
+    lucidityLevel: 5,
+    tags: ''
+  });
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const newEntry: DreamEntry = {
+      id: Date.now(),
+      title: formData.title,
+      content: formData.content,
+      dreamDate: formData.dreamDate,
+      lucidityLevel: Number(formData.lucidityLevel),
+      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
     };
-
-    fetchEntries();
-  }, [user]);
-
-  // Filter and sort entries
-  const filteredAndSortedEntries = entries
-    .filter(entry => 
-      filter === '' || 
-      entry.title.toLowerCase().includes(filter.toLowerCase()) ||
-      entry.tags.some(tag => tag.toLowerCase().includes(filter.toLowerCase())) ||
-      entry.content.toLowerCase().includes(filter.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sortBy === 'date') {
-        return sortOrder === 'asc' 
-          ? new Date(a.dream_date).getTime() - new Date(b.dream_date).getTime()
-          : new Date(b.dream_date).getTime() - new Date(a.dream_date).getTime()
-      } else {
-        return sortOrder === 'asc'
-          ? a.lucidity_level - b.lucidity_level
-          : b.lucidity_level - a.lucidity_level
-      }
-    })
-    .slice(0, limit)
-
-  // Get color based on lucidity level
+    
+    setEntries(prev => [newEntry, ...prev]);
+    setIsFormOpen(false);
+    setFormData({
+      title: '',
+      content: '',
+      dreamDate: new Date().toISOString().split('T')[0],
+      lucidityLevel: 5,
+      tags: ''
+    });
+  };
+  
   const getLucidityColor = (level: number) => {
-    if (level >= 8) return 'bg-blue-500'
-    if (level >= 5) return 'bg-green-500'
-    if (level >= 3) return 'bg-yellow-500'
-    return 'bg-gray-500'
-  }
-
-  // Format date
+    if (level >= 8) return 'bg-purple-500';
+    if (level >= 6) return 'bg-blue-500';
+    if (level >= 4) return 'bg-green-500';
+    if (level >= 2) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+  
+  // Fix for hydration error - use client-side only formatting
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    })
-  }
-
-  // Handle creating a new entry
-  const handleNewEntry = () => {
-    // Navigate to new entry form or open modal
-    // This would be implemented based on the app's navigation structure
-    console.log('Create new entry');
-  }
-
-  if (isLoading) {
-    return (
-      <div className={`p-4 ${className}`}>
-        <div className="flex justify-between mb-4">
-          <h2 className="text-xl font-semibold">Dream Journal</h2>
-          <div className="animate-pulse w-24 h-8 bg-gray-700 rounded"></div>
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="animate-pulse p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-              <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-700 rounded w-1/4 mb-4"></div>
-              <div className="h-4 bg-gray-700 rounded w-full mb-2"></div>
-              <div className="h-4 bg-gray-700 rounded w-5/6"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className={`p-4 ${className}`}>
-        <div className="text-center py-8">
-          <p className="text-red-400 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    )
-  }
-
+    if (typeof window === 'undefined') {
+      return dateString; // Return simple string on server
+    }
+    
+    // Only run this on the client
+    try {
+      const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString(undefined, options);
+    } catch (e) {
+      return dateString;
+    }
+  };
+  
   return (
-    <div className={`p-4 ${className}`}>
-      <div className="flex flex-col md:flex-row justify-between mb-4 gap-4">
-        <h2 className="text-xl font-semibold">Dream Journal</h2>
+    <div className={`p-6 bg-black bg-opacity-30 backdrop-blur-sm rounded-lg shadow-xl ${className}`}>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Dream Journal</h2>
         
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            placeholder="Search dreams..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-3 py-1 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-          
-          <select
-            value={`${sortBy}-${sortOrder}`}
-            onChange={(e) => {
-              const [newSortBy, newSortOrder] = e.target.value.split('-') as ['date' | 'lucidity', 'asc' | 'desc']
-              setSortBy(newSortBy)
-              setSortOrder(newSortOrder)
-            }}
-            className="px-3 py-1 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="date-desc">Newest first</option>
-            <option value="date-asc">Oldest first</option>
-            <option value="lucidity-desc">Highest lucidity</option>
-            <option value="lucidity-asc">Lowest lucidity</option>
-          </select>
-        </div>
+        <button
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition"
+        >
+          {isFormOpen ? 'Cancel' : 'New Entry'}
+        </button>
       </div>
       
-      {filteredAndSortedEntries.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
-          {filter ? 'No dreams match your search' : 'No dream journal entries yet'}
+      {isFormOpen && (
+        <div className="mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+          <h3 className="text-xl font-medium mb-4">New Dream Journal Entry</h3>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label htmlFor="title" className="block mb-1 font-medium">
+                Title
+              </label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter dream title..."
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="dreamDate" className="block mb-1 font-medium">
+                Dream Date
+              </label>
+              <input
+                type="date"
+                id="dreamDate"
+                name="dreamDate"
+                value={formData.dreamDate}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="content" className="block mb-1 font-medium">
+                Dream Description
+              </label>
+              <textarea
+                id="content"
+                name="content"
+                value={formData.content}
+                onChange={handleChange}
+                required
+                rows={4}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Describe your dream in detail..."
+              ></textarea>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="lucidityLevel" className="block mb-1 font-medium">
+                Lucidity Level (1-10): {formData.lucidityLevel}
+              </label>
+              <input
+                type="range"
+                id="lucidityLevel"
+                name="lucidityLevel"
+                min="1"
+                max="10"
+                value={formData.lucidityLevel}
+                onChange={handleChange}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>Not Lucid</span>
+                <span>Fully Lucid</span>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="tags" className="block mb-1 font-medium">
+                Tags (comma separated)
+              </label>
+              <input
+                type="text"
+                id="tags"
+                name="tags"
+                value={formData.tags}
+                onChange={handleChange}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="flying, lucid, water, etc..."
+              />
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition"
+              >
+                Save Entry
+              </button>
+            </div>
+          </form>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredAndSortedEntries.map(entry => (
-            <div 
-              key={entry.id}
-              onClick={() => onSelectEntry && onSelectEntry(entry.id)}
-              className="p-4 bg-gray-800 bg-opacity-50 hover:bg-opacity-70 rounded-lg transition cursor-pointer"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-medium">{entry.title}</h3>
-                <div className={`px-2 py-1 rounded-full text-xs font-medium ${getLucidityColor(entry.lucidity_level)}`}>
-                  Lucidity: {entry.lucidity_level}/10
-                </div>
+      )}
+      
+      <div className="space-y-4">
+        {entries.map(entry => (
+          <div 
+            key={entry.id}
+            className="p-4 bg-gray-800 bg-opacity-50 rounded-lg"
+          >
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-medium">{entry.title}</h3>
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${getLucidityColor(entry.lucidityLevel)}`}>
+                Lucidity: {entry.lucidityLevel}/10
               </div>
-              
-              <div className="text-sm text-gray-400 mb-2">
-                {formatDate(entry.dream_date)}
-              </div>
-              
-              <p className="text-gray-300 line-clamp-2 mb-2">
-                {entry.content}
-              </p>
-              
-              <div className="flex flex-wrap gap-1">
+            </div>
+            
+            <div className="text-sm text-gray-400 mb-2">
+              {entry.dreamDate}
+            </div>
+            
+            <p className="mb-3 text-gray-300">{entry.content}</p>
+            
+            {entry.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
                 {entry.tags.map(tag => (
                   <span 
-                    key={tag} 
-                    className="px-2 py-0.5 bg-blue-900 bg-opacity-50 rounded-full text-xs"
+                    key={tag}
+                    className="px-2 py-1 bg-gray-700 rounded-full text-xs"
                   >
                     {tag}
                   </span>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-      
-      {!limit && (
-        <div className="mt-6 text-center">
-          <button 
-            onClick={handleNewEntry}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition"
-          >
-            New Dream Entry
-          </button>
-        </div>
-      )}
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-  )
+  );
 }

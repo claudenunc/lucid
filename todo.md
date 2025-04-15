@@ -28,5 +28,5 @@
 ## Documentation
 - [x] Document project structure
 - [x] Document implemented features
-- [ ] Create user guide
+- [x] Create user guide
 - [ ] Report results to user

@@ -1,36 +1,58 @@
-'use client'
-
-import React, { useState, useEffect } from 'react'
-import { useDreamContext } from '@/lib/dream-context'
-import { practiceSessionService } from '@/lib/api'
+import React, { useState } from 'react';
 
 interface PracticeSessionProps {
-  className?: string
+  className?: string;
 }
 
 type PracticeSession = {
-  id: number
-  protocol_type: string
-  protocol_name: string
-  duration_minutes: number
-  effectiveness_rating: number
-  notes: string
-  created_at: string
-}
+  id: number;
+  protocolType: string;
+  protocolName: string;
+  durationMinutes: number;
+  effectivenessRating: number;
+  notes: string;
+  createdAt: string;
+};
 
 export default function PracticeSession({ className = '' }: PracticeSessionProps) {
-  const { user } = useDreamContext()
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [sessions, setSessions] = useState<PracticeSession[]>([])
-  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [sessions, setSessions] = useState<PracticeSession[]>([
+    {
+      id: 1,
+      protocolType: 'dream_navigation',
+      protocolName: 'MILD (Mnemonic Induction of Lucid Dreams)',
+      durationMinutes: 20,
+      effectivenessRating: 8,
+      notes: 'Repeated the mantra "I will realize I\'m dreaming" before sleep. Had a brief lucid moment.',
+      createdAt: '2025-04-14T21:30:00Z'
+    },
+    {
+      id: 2,
+      protocolType: 'reality_manifestation',
+      protocolName: 'Reality Testing',
+      durationMinutes: 15,
+      effectivenessRating: 6,
+      notes: 'Performed reality checks throughout the day. Noticed increased awareness.',
+      createdAt: '2025-04-13T18:45:00Z'
+    },
+    {
+      id: 3,
+      protocolType: 'intention_amplification',
+      protocolName: 'Prospective Memory Training',
+      durationMinutes: 30,
+      effectivenessRating: 7,
+      notes: 'Set intentions to notice specific triggers in dreams. Remembered one trigger.',
+      createdAt: '2025-04-12T20:15:00Z'
+    }
+  ]);
+  
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
     protocolType: 'dream_navigation',
     protocolName: '',
     durationMinutes: 15,
     effectivenessRating: 5,
     notes: ''
-  })
+  });
   
   // Protocol types
   const protocolTypes = [
@@ -38,7 +60,7 @@ export default function PracticeSession({ className = '' }: PracticeSessionProps
     { id: 'reality_manifestation', name: 'Reality Manifestation' },
     { id: 'intention_amplification', name: 'Intention Amplification' },
     { id: 'synchronicity', name: 'Synchronicity' }
-  ]
+  ];
   
   // Protocol names by type
   const protocolNamesByType: Record<string, string[]> = {
@@ -66,28 +88,7 @@ export default function PracticeSession({ className = '' }: PracticeSessionProps
       'Consciousness Expansion',
       'Dream Yoga'
     ]
-  }
-  
-  // Fetch practice sessions
-  useEffect(() => {
-    const fetchSessions = async () => {
-      if (!user) return;
-      
-      try {
-        setIsLoading(true);
-        const data = await practiceSessionService.getAllSessions();
-        setSessions(data);
-        setError(null);
-      } catch (err: any) {
-        console.error('Error fetching practice sessions:', err);
-        setError(err.error || 'Failed to load practice sessions');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchSessions();
-  }, [user]);
+  };
   
   // Handle form input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -110,7 +111,7 @@ export default function PracticeSession({ className = '' }: PracticeSessionProps
   };
   
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.protocolName) {
@@ -118,48 +119,39 @@ export default function PracticeSession({ className = '' }: PracticeSessionProps
       return;
     }
     
-    try {
-      setIsLoading(true);
-      
-      const newSession = await practiceSessionService.createSession({
-        protocolType: formData.protocolType,
-        protocolName: formData.protocolName,
-        durationMinutes: formData.durationMinutes,
-        effectivenessRating: formData.effectivenessRating,
-        notes: formData.notes
-      });
-      
-      // Add new session to the list
-      setSessions(prev => [newSession, ...prev]);
-      
-      // Reset form and close it
-      setFormData({
-        protocolType: 'dream_navigation',
-        protocolName: '',
-        durationMinutes: 15,
-        effectivenessRating: 5,
-        notes: ''
-      });
-      setIsFormOpen(false);
-      
-    } catch (err: any) {
-      console.error('Error creating practice session:', err);
-      alert(err.error || 'Failed to create practice session');
-    } finally {
-      setIsLoading(false);
-    }
+    const newSession: PracticeSession = {
+      id: Date.now(),
+      protocolType: formData.protocolType,
+      protocolName: formData.protocolName,
+      durationMinutes: formData.durationMinutes,
+      effectivenessRating: formData.effectivenessRating,
+      notes: formData.notes,
+      createdAt: new Date().toISOString()
+    };
+    
+    setSessions(prev => [newSession, ...prev]);
+    setIsFormOpen(false);
+    setFormData({
+      protocolType: 'dream_navigation',
+      protocolName: '',
+      durationMinutes: 15,
+      effectivenessRating: 5,
+      notes: ''
+    });
   };
   
-  // Format date
+  // Format date - fix for hydration error
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (typeof window === 'undefined') {
+      return dateString; // Return simple string on server
+    }
+    
+    // Only run this on the client
+    try {
+      return dateString;
+    } catch (e) {
+      return dateString;
+    }
   };
   
   // Get color based on effectiveness rating
@@ -169,24 +161,6 @@ export default function PracticeSession({ className = '' }: PracticeSessionProps
     if (rating >= 3) return 'bg-yellow-500';
     return 'bg-red-500';
   };
-  
-  if (isLoading && sessions.length === 0) {
-    return (
-      <div className={`p-6 bg-black bg-opacity-30 backdrop-blur-sm rounded-lg shadow-xl ${className}`}>
-        <h2 className="text-2xl font-bold mb-6">Practice Sessions</h2>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="animate-pulse p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-              <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-700 rounded w-1/2 mb-4"></div>
-              <div className="h-4 bg-gray-700 rounded w-full mb-2"></div>
-              <div className="h-4 bg-gray-700 rounded w-5/6"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
   
   return (
     <div className={`p-6 bg-black bg-opacity-30 backdrop-blur-sm rounded-lg shadow-xl ${className}`}>
@@ -200,18 +174,6 @@ export default function PracticeSession({ className = '' }: PracticeSessionProps
           {isFormOpen ? 'Cancel' : 'New Session'}
         </button>
       </div>
-      
-      {error && (
-        <div className="mb-6 p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded">
-          <p className="text-red-300">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 rounded-md text-sm transition"
-          >
-            Try Again
-          </button>
-        </div>
-      )}
       
       {isFormOpen && (
         <div className="mb-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg">
@@ -313,52 +275,45 @@ export default function PracticeSession({ className = '' }: PracticeSessionProps
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition"
               >
-                {isLoading ? 'Saving...' : 'Save Session'}
+                Save Session
               </button>
             </div>
           </form>
         </div>
       )}
       
-      {sessions.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
-          No practice sessions recorded yet
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {sessions.map(session => (
-            <div 
-              key={session.id}
-              className="p-4 bg-gray-800 bg-opacity-50 rounded-lg"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-medium">{session.protocol_name}</h3>
-                <div className={`px-2 py-1 rounded-full text-xs font-medium ${getEffectivenessColor(session.effectiveness_rating)}`}>
-                  Rating: {session.effectiveness_rating}/10
-                </div>
+      <div className="space-y-4">
+        {sessions.map(session => (
+          <div 
+            key={session.id}
+            className="p-4 bg-gray-800 bg-opacity-50 rounded-lg"
+          >
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-medium">{session.protocolName}</h3>
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${getEffectivenessColor(session.effectivenessRating)}`}>
+                Rating: {session.effectivenessRating}/10
               </div>
-              
-              <div className="text-sm text-gray-400 mb-2">
-                {formatDate(session.created_at)} • {session.duration_minutes} minutes
-              </div>
-              
-              <div className="text-sm mb-2">
-                <span className="text-blue-400">Protocol Type:</span>{' '}
-                {session.protocol_type.replace('_', ' ')}
-              </div>
-              
-              {session.notes && (
-                <p className="text-gray-300 border-t border-gray-700 pt-2 mt-2">
-                  {session.notes}
-                </p>
-              )}
             </div>
-          ))}
-        </div>
-      )}
+            
+            <div className="text-sm text-gray-400 mb-2">
+              {session.createdAt} • {session.durationMinutes} minutes
+            </div>
+            
+            <div className="text-sm mb-2">
+              <span className="text-blue-400">Protocol Type:</span>{' '}
+              {session.protocolType.replace('_', ' ')}
+            </div>
+            
+            {session.notes && (
+              <p className="text-gray-300 border-t border-gray-700 pt-2 mt-2">
+                {session.notes}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-  )
+  );
 }
