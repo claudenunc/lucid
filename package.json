@@ -1,0 +1,23 @@
+{
+  "name": "lucid-project",
+  "version": "1.0.0",
+  "description": "Lucid Dreaming Application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [
+    "lucid",
+    "dreams",
+    "meditation",
+    "consciousness"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.8.4"
+  }
+}
