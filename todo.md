@@ -29,4 +29,4 @@
 - [x] Document project structure
 - [x] Document implemented features
 - [x] Create user guide
-- [ ] Report results to user
+- [x] Report results to user
